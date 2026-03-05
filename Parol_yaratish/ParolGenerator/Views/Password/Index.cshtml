@@ -1,0 +1,221 @@
+﻿@model ParolGenerator.Models.PasswordViewModel
+
+@{
+    ViewData["Title"] = "ASCII Parol Generator";
+}
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin: 50px auto;
+            padding: 30px;
+        }
+
+        .password-display {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: monospace;
+            font-size: 24px;
+            text-align: center;
+            word-break: break-all;
+            margin: 20px 0;
+        }
+
+        .ascii-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 3px;
+            background: #e9ecef;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+
+        .copy-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #667eea;
+        }
+
+        .recent-password-item {
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+            font-family: monospace;
+            cursor: pointer;
+        }
+
+            .recent-password-item:hover {
+                background: #f8f9fa;
+            }
+
+        .format-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-card">
+            <h1 class="text-center mb-4">🔐 ASCII Parol Generator</h1>
+
+            <!-- Formatlangan parol uchun maxsus tugma -->
+            <div class="format-info">
+                <h5>🎯 Maxsus format: 2 raqam + 1 belgi + 3 kichik harf + 2 katta harf</h5>
+                @using (Html.BeginForm("GenerateFormattedPassword", "Password", FormMethod.Post))
+                {
+                    <button type="submit" class="btn btn-success">Shu formatda parol yaratish (8 belgi)</button>
+                }
+            </div>
+
+            <hr />
+
+            <!-- Random parol uchun form -->
+            @using (Html.BeginForm("Generate", "Password", FormMethod.Post))
+            {
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Parol uzunligi (4-50):</label>
+                            @Html.TextBoxFor(m => m.PasswordOptions.Length, new { @class = "form-control", type = "number", min = "4", max = "50", id = "passwordLength" })
+                            @Html.ValidationMessageFor(m => m.PasswordOptions.Length, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <a asp-action="AsciiTable" class="btn btn-outline-primary w-100 mt-4" target="_blank">📋 ASCII jadvalni ko'rish</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            @Html.CheckBoxFor(m => m.PasswordOptions.IncludeUppercase, new { @class = "form-check-input", id = "includeUpper" })
+                            <label class="form-check-label" for="includeUpper">Katta harflar</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            @Html.CheckBoxFor(m => m.PasswordOptions.IncludeLowercase, new { @class = "form-check-input", id = "includeLower" })
+                            <label class="form-check-label" for="includeLower">Kichik harflar</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            @Html.CheckBoxFor(m => m.PasswordOptions.IncludeNumbers, new { @class = "form-check-input", id = "includeNumbers" })
+                            <label class="form-check-label" for="includeNumbers">Raqamlar</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            @Html.CheckBoxFor(m => m.PasswordOptions.IncludeSpecialChars, new { @class = "form-check-input", id = "includeSpecial" })
+                            <label class="form-check-label" for="includeSpecial">Maxsus belgilar</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg px-5">🎲 Random parol yaratish</button>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.PasswordOptions.GeneratedPassword))
+            {
+                <div class="mt-5">
+                    <h3>Yaratilgan parol (uzunligi: @Model.PasswordOptions.Length):</h3>
+                    <div class="position-relative">
+                        <div class="password-display" id="generatedPassword">
+                            @Model.PasswordOptions.GeneratedPassword
+                        </div>
+                        <span class="copy-btn" onclick="copyPassword()">📋</span>
+                    </div>
+
+                    @if (Model.PasswordOptions.AsciiValues.Any())
+                    {
+                        <div class="mt-3">
+                            <h5>ASCII qiymatlari:</h5>
+                            <div>
+                                @foreach (var ascii in Model.PasswordOptions.AsciiValues)
+                                {
+                                    <span class="ascii-badge">@ascii: '@((char)ascii)'</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (Model.RecentPasswords.Any())
+            {
+                <div class="mt-5">
+                    <h4>📜 So'nggi parollar</h4>
+                    <div class="list-group">
+                        @foreach (var item in Model.RecentPasswords)
+                        {
+                            <div class="recent-password-item d-flex justify-content-between align-items-center"
+                                 onclick="usePassword('@item.Password')">
+                                <div>
+                                    <span class="font-monospace">@item.Password</span>
+                                    <small class="text-muted ms-3">(@item.Length belgi)</small>
+                                    @if (!string.IsNullOrEmpty(item.Category))
+                                    {
+                                        <span class="badge bg-info ms-2">@item.Category</span>
+                                    }
+                                </div>
+                                <small>@item.CreatedAt.ToString("HH:mm")</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <script>
+        function copyPassword() {
+            let password = document.getElementById('generatedPassword').textContent;
+            navigator.clipboard.writeText(password).then(() => alert('Parol nusxalandi!'));
+        }
+
+        function usePassword(password) {
+            document.getElementById('generatedPassword').textContent = password;
+        }
+
+        // Form submit qilishdan oldin validatsiya
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                if (this.action.includes('Generate') && !this.action.includes('Formatted')) {
+                    let checkboxes = this.querySelectorAll('input[type=checkbox]');
+                    let checked = Array.from(checkboxes).some(cb => cb.checked);
+
+                    if (!checked) {
+                        e.preventDefault();
+                        alert('Kamida bitta belgi turini tanlang!');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
